@@ -1,20 +1,19 @@
 #[derive(Copy, Clone, Debug)]
 pub struct Cpu {
-    opcode: u8,           // Chip8 has 35 opcodes
-    memory: [u8; 4096],   // 4096 locations 8bit each
-    v: [u8; 16],          // 15 registers + 16th "carry flag" register
-    i: u16,               // Index Register
-    pc: u16,              // Program Counter 0x00f - 0xfff
-    gfx: [bool; 64 * 32], // 2048 pixels monochrone (1-on, 0-off)
-    sp: u16,              // Stack Pointer
-    stack: [u16; 12],     //Stack
-    delay_timer: u8,      // Counters count at 60hz.
-    sound_timer: u8,      // When set above zero, they will count down.
+    opcode: u8,         // Chip8 has 35 opcodes
+    memory: [u8; 4096], // 4096 locations 8bit each
+    v: [u8; 16],        // 15 registers + 16th "carry flag" register
+    i: u16,             // Index Register
+    pc: u16,            // Program Counter 0x00f - 0xfff
+    sp: u16,            // Stack Pointer
+    stack: [u16; 12],   //Stack
+    delay_timer: u8,    // Counters count at 60hz.
+    sound_timer: u8,    // When set above zero, they will count down.
 }
 
 impl Cpu {
     // Initialize registers and memory once
-    fn initialize() -> Cpu {
+    pub fn initialize() -> Cpu {
         let mut m: [u8; 4096] = [0; 4096];
         for i in 0..80 {
             m[i] = FONT_SET[i];
@@ -31,7 +30,6 @@ impl Cpu {
             v: [0; 16],
             i: 0,
             pc: 0x200,
-            gfx: [false; 64 * 32],
             sp: 0,
             stack: [0; 12],
             delay_timer: 0,
@@ -39,7 +37,7 @@ impl Cpu {
         }
     }
 
-    fn emulate_cycle(&self) {
+    pub fn emulate_cycle(&self) {
         // fetch opcode
         // decode opcode
         // execute opcode

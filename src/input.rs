@@ -13,11 +13,12 @@ impl Keyboard {
         }
     }
 
-    pub fn get_key(&mut self) {
+    pub fn get_active_keys(&mut self) -> &Vec<Keycode> {
         let keys = self.device_state.get_keys();
         if keys != self.prev_keys {
             println!("{:?}", keys);
         }
         self.prev_keys = keys;
+        &self.prev_keys
     }
 }
