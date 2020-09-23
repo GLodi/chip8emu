@@ -8,6 +8,4 @@ edition = "2018"
 
 [dependencies]
 device_query = "0.2.5"
-pixels = "0.2.0"
-winit = "0.22.2"
-winit_input_helper = "0.7.0"
+sdl2 = "0.34.3"
