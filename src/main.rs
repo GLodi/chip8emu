@@ -16,10 +16,12 @@ fn main() {
 
     cpu.load_cartridge(&c);
 
-    d.print_digit(8, 66, 10);
+    d.print_digit(8, 32, 10);
 
+    // use enum to store what key has been pressed
     'gameloop: loop {
         d.canvas.clear();
+
         for event in d.event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -30,6 +32,18 @@ fn main() {
                 _ => {}
             }
         }
+        let keys: Vec<Keycode> = d
+            .event_pump
+            .keyboard_state()
+            .pressed_scancodes()
+            .filter_map(Keycode::from_scancode)
+            .collect();
+
+        if !keys.is_empty() && keys[0] == Keycode::Num1 {
+            d.print_digit(8, 34, 10);
+        }
+
+        println!("{:?}", keys);
 
         // Do whatever, edit d.gfx to update the state of the next frame
         // and set_frame to reflect changes onto the screen
