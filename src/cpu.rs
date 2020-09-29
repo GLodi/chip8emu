@@ -1,3 +1,5 @@
+use crate::cartridge;
+
 #[derive(Copy, Clone, Debug)]
 pub struct Cpu {
     opcode: u8,         // Chip8 has 35 opcodes
@@ -43,6 +45,13 @@ impl Cpu {
         // execute opcode
 
         // update timers
+    }
+
+    // Loads cartridge data starting from RAM address 0x200
+    pub fn load_cartridge(&mut self, c: &cartridge::Cartridge) {
+        for (i, &el) in c.rom.iter().enumerate() {
+            self.memory[0x200 + i] = el;
+        }
     }
 }
 

@@ -1,24 +1,20 @@
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
 use std::env;
 use std::time::Duration;
 
 mod cartridge;
 mod cpu;
 mod display;
-mod input;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    println!("trying to open {:?}", &args[1]);
 
-    let mut k = input::Keyboard::new();
-
-    let cpu = cpu::Cpu::initialize();
+    let mut cpu = cpu::Cpu::initialize();
     let mut d = display::Display::new();
     let c = cartridge::Cartridge::new(&args[1]);
-    print!("{:?}", c.rom);
+
+    cpu.load_cartridge(&c);
 
     'gameloop: loop {
         d.canvas.clear();

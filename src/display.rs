@@ -44,7 +44,7 @@ impl Display {
         for (n, el) in self.gfx.to_vec().iter().enumerate() {
             let color = if *el { Color::WHITE } else { Color::BLACK };
             self.canvas.set_draw_color(color);
-            self.canvas.fill_rect(Rect::new(
+            let _ = self.canvas.fill_rect(Rect::new(
                 ((n as i32) % WIDTH as i32) * BOX_SIZE as i32,
                 ((n as i32) / WIDTH as i32) * BOX_SIZE as i32,
                 BOX_SIZE,

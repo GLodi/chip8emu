@@ -5,6 +5,7 @@ pub struct Cartridge {
 
 impl Cartridge {
     pub fn new(filename: &str) -> Cartridge {
+        println!("trying to open {:?}", filename);
         match std::fs::read(filename) {
             Ok(bytes) => Cartridge { rom: bytes },
             Err(e) => {
