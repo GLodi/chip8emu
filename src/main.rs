@@ -13,12 +13,7 @@ fn main() {
     let c = cpu::Cpu::initialize();
     let mut d = display::Display::new();
 
-    let mut i = 0;
     'gameloop: loop {
-        i = (i + 1) % 255;
-        d.canvas.set_draw_color(Color::RGB(i, 64, 255 - i));
-        // d.getFrame
-
         d.canvas.clear();
         for event in d.event_pump.poll_iter() {
             match event {
@@ -30,7 +25,8 @@ fn main() {
                 _ => {}
             }
         }
-        // The rest of the game loop goes here...
+        // Do whatever and edit d.gfx to update the state of the next frame
+        d.set_frame();
 
         d.canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));

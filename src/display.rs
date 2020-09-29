@@ -19,7 +19,7 @@ impl Display {
         let video_subsystem = sdl_context.video().unwrap();
 
         let window = video_subsystem
-            .window("chip8emu by glodi", WIDTH * 10, HEIGHT * 10)
+            .window("chip8emu by glodi", WIDTH * BOX_SIZE, HEIGHT * BOX_SIZE)
             .position_centered()
             .opengl()
             .build()
@@ -27,7 +27,7 @@ impl Display {
 
         let mut canvas = window.into_canvas().build().unwrap();
 
-        canvas.set_draw_color(Color::RGB(0, 255, 255));
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
         canvas.present();
         let event_pump = sdl_context.event_pump().unwrap();
@@ -39,12 +39,17 @@ impl Display {
         }
     }
 
-    pub fn get_frame(&mut self) {
-        // edit self.canvas so that it reflects the current state of self.gfx
-        for el in self.gfx.iter() {
+    // edit self.canvas so that it reflects the current state of self.gfx
+    pub fn set_frame(&mut self) {
+        for (n, el) in self.gfx.to_vec().iter().enumerate() {
             let color = if *el { Color::WHITE } else { Color::BLACK };
             self.canvas.set_draw_color(color);
-            self.canvas.fill_rect(Rect::new(/*get coordinate*/));
+            self.canvas.fill_rect(Rect::new(
+                ((n as i32) % WIDTH as i32) * BOX_SIZE as i32,
+                ((n as i32) / WIDTH as i32) * BOX_SIZE as i32,
+                BOX_SIZE,
+                BOX_SIZE,
+            ));
         }
     }
 }
