@@ -16,6 +16,8 @@ fn main() {
 
     cpu.load_cartridge(&c);
 
+    d.print_digit(8, 66, 10);
+
     'gameloop: loop {
         d.canvas.clear();
         for event in d.event_pump.poll_iter() {
