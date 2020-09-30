@@ -40,10 +40,10 @@ fn main() {
             .collect();
 
         if !keys.is_empty() && keys[0] == Keycode::Num1 {
-            d.print_digit(8, 34, 10);
+            d.print_digit(11, 12, 0);
         }
 
-        println!("{:?}", keys);
+        cpu.emulate_cycle();
 
         // Do whatever, edit d.gfx to update the state of the next frame
         // and set_frame to reflect changes onto the screen
