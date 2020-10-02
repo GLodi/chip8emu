@@ -10,15 +10,19 @@ mod display;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let mut cpu = cpu::Cpu::initialize();
-    let mut d = display::Display::new();
+    if args.len() != 2 {
+        println!("You need to provide the rom filename as argument!!!");
+        panic!();
+    }
+
     let c = cartridge::Cartridge::new(&args[1]);
+    let mut cpu = cpu::Cpu::initialize(&c);
+    let mut d = display::Display::new();
 
-    cpu.load_cartridge(&c);
+    cpu.dump_memory();
 
-    d.print_digit(8, 32, 10);
+    cpu.print_digit(8, 32, 10);
 
-    // use enum to store what key has been pressed
     'gameloop: loop {
         d.canvas.clear();
 
@@ -40,15 +44,13 @@ fn main() {
             .collect();
 
         if !keys.is_empty() && keys[0] == Keycode::Num1 {
-            d.print_digit(11, 12, 0);
+            cpu.print_digit(11, 12, 0);
         }
 
         cpu.emulate_cycle();
 
-        // Do whatever, edit d.gfx to update the state of the next frame
-        // and set_frame to reflect changes onto the screen
+        d.set_frame(&cpu.gfx);
 
-        d.set_frame();
         d.canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }

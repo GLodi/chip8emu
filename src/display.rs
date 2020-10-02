@@ -3,14 +3,13 @@ use sdl2::rect::Rect;
 use sdl2::render::WindowCanvas;
 use sdl2::EventPump;
 
-const WIDTH: u32 = 64;
-const HEIGHT: u32 = 32;
+pub const WIDTH: u32 = 64;
+pub const HEIGHT: u32 = 32;
 const BOX_SIZE: u32 = 10;
 
 pub struct Display {
     pub event_pump: EventPump,
     pub canvas: WindowCanvas,
-    pub gfx: [bool; (WIDTH as usize) * (HEIGHT as usize)], // 2048 pixels monochrone (1-on, 0-off)
 }
 
 impl Display {
@@ -35,13 +34,12 @@ impl Display {
         Display {
             event_pump: event_pump,
             canvas: canvas,
-            gfx: [false; (WIDTH as usize) * (HEIGHT as usize)],
         }
     }
 
-    // edit self.canvas so that it reflects the current state of self.gfx
-    pub fn set_frame(&mut self) {
-        for (n, el) in self.gfx.to_vec().iter().enumerate() {
+    // edit self.canvas so that it reflects the current state of gfx
+    pub fn set_frame(&mut self, &gfx: &[bool; (WIDTH as usize) * (HEIGHT as usize)]) {
+        for (n, el) in gfx.to_vec().iter().enumerate() {
             let color = if *el { Color::WHITE } else { Color::BLACK };
             self.canvas.set_draw_color(color);
             let _ = self.canvas.fill_rect(Rect::new(
@@ -50,26 +48,6 @@ impl Display {
                 BOX_SIZE,
                 BOX_SIZE,
             ));
-        }
-    }
-
-    pub fn print_digit(&mut self, digit: u8, offset_x: u8, offset_y: u8) {
-        let a: &[u8] = &FONT_SET[(digit * 5) as usize..(digit * 5 + 5) as usize];
-        let and_mask: u8 = 128;
-
-        let mut x = 0;
-        for i in offset_y..(offset_y + 5) {
-            let mut temp = a[x as usize];
-            x += 1;
-            // println!("{:#01x}", a[i]);
-            for e in offset_x..(offset_x + 8) {
-                let last_bit: u8 = temp & and_mask;
-                // println!("{}", last_bit);
-                if last_bit == 128 {
-                    self.gfx[i as usize * 64 + e as usize] = true;
-                }
-                temp = temp << 1;
-            }
         }
     }
 }

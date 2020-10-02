@@ -5,7 +5,7 @@ pub struct Cartridge {
 
 impl Cartridge {
     pub fn new(filename: &str) -> Cartridge {
-        println!("trying to open {:?}", filename);
+        println!("Trying to open {:?}", filename);
         match std::fs::read(filename) {
             Ok(bytes) => Cartridge { rom: bytes },
             Err(e) => {
@@ -16,7 +16,7 @@ impl Cartridge {
                     );
                 }
                 if e.kind() == std::io::ErrorKind::PermissionDenied {
-                    eprintln!("please run again with appropriate permissions.");
+                    eprintln!("Please run again with appropriate permissions.");
                 }
                 panic!("{}", e);
             }

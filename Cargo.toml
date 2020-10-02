@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 device_query = "0.2.5"
 sdl2 = "0.34.3"
+rand = "0.7.3"
