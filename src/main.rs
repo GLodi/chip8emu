@@ -43,11 +43,32 @@ fn main() {
             .filter_map(Keycode::from_scancode)
             .collect();
 
+        let mut key_pressed: u8 = 0;
+
         if !keys.is_empty() && keys[0] == Keycode::Num1 {
             cpu.print_digit(11, 12, 0);
+            match keys[0] {
+                Keycode::Num1 => key_pressed = 1,
+                Keycode::Num2 => key_pressed = 2,
+                Keycode::Num3 => key_pressed = 3,
+                Keycode::Num4 => key_pressed = 4,
+                Keycode::Q => key_pressed = 5,
+                Keycode::W => key_pressed = 6,
+                Keycode::E => key_pressed = 7,
+                Keycode::R => key_pressed = 8,
+                Keycode::A => key_pressed = 9,
+                Keycode::S => key_pressed = 10,
+                Keycode::D => key_pressed = 11,
+                Keycode::F => key_pressed = 12,
+                Keycode::Z => key_pressed = 13,
+                Keycode::X => key_pressed = 14,
+                Keycode::C => key_pressed = 15,
+                Keycode::V => key_pressed = 16,
+                _ => println!("ERROR KEYCODE NOT RECOGNIZED"),
+            }
         }
 
-        cpu.emulate_cycle();
+        cpu.emulate_cycle(key_pressed);
 
         d.set_frame(&cpu.gfx);
 

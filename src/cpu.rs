@@ -12,6 +12,7 @@ pub struct Cpu {
     stack: [u16; 12],   // Stack
     delay_timer: u8,    // Counters count at 60hz.
     sound_timer: u8,    // When set above zero, they will count down.
+    wait_key: bool,
     pub gfx: [bool; (display::WIDTH as usize) * (display::HEIGHT as usize)], // 2048 pixels monochrone (1-on, 0-off)
 }
 
@@ -38,6 +39,7 @@ impl Cpu {
             stack: [0; 12],
             delay_timer: 0,
             sound_timer: 0,
+            wait_key: false,
             gfx: [false; (display::WIDTH as usize) * (display::HEIGHT as usize)],
         }
     }
@@ -74,36 +76,46 @@ impl Cpu {
         }
     }
 
-    pub fn emulate_cycle(&mut self) {
+    pub fn emulate_cycle(&mut self, key: u8) {
         let opcode: u16 = (self.memory[self.pc as usize] as u16) << 8
             | (self.memory[self.pc as usize + 1] as u16);
         let nnn: u16 = opcode & 0x0FFF;
 
         println!("{:#0x}", opcode);
 
-        // All opcodes use the first 4 bits to specify what command
-        // it is. The remaining 12 bits are arguments.
-        match opcode & 0xF000 {
-            0x0000 => self.op_0(nnn),
-            0x1000 => self.op_1(nnn),
-            0x2000 => self.op_2(nnn),
-            0x3000 => self.op_3(nnn),
-            0x4000 => self.op_4(nnn),
-            0x5000 => self.op_5(nnn),
-            0x6000 => self.op_6(nnn),
-            0x7000 => self.op_7(nnn),
-            0x8000 => self.op_8(nnn),
-            0x9000 => self.op_9(nnn),
-            0xA000 => self.op_a(nnn),
-            0xB000 => self.op_b(nnn),
-            0xC000 => self.op_c(nnn),
-            0xD000 => self.op_d(nnn),
-            0xE000 => self.op_e(nnn),
-            0xF000 => self.op_f(nnn),
-            _ => println!("ERROR OPCODE NOT RECOGNIZED"),
-        }
+        if self.wait_key {
+            return;
+        } else {
+            // Update timers
+            if self.delay_timer > 0 {
+                self.delay_timer -= 1;
+            }
+            if self.sound_timer > 0 {
+                self.sound_timer -= 1;
+            }
 
-        // update timers
+            // All opcodes use the first 4 bits to specify what command
+            // it is. The remaining 12 bits are arguments.
+            match opcode & 0xF000 {
+                0x0000 => self.op_0(nnn),
+                0x1000 => self.op_1(nnn),
+                0x2000 => self.op_2(nnn),
+                0x3000 => self.op_3(nnn),
+                0x4000 => self.op_4(nnn),
+                0x5000 => self.op_5(nnn),
+                0x6000 => self.op_6(nnn),
+                0x7000 => self.op_7(nnn),
+                0x8000 => self.op_8(nnn),
+                0x9000 => self.op_9(nnn),
+                0xA000 => self.op_a(nnn),
+                0xB000 => self.op_b(nnn),
+                0xC000 => self.op_c(nnn),
+                0xD000 => self.op_d(nnn),
+                0xE000 => self.op_e(nnn, key),
+                0xF000 => self.op_f(nnn, key),
+                _ => panic!("ERROR OPCODE NOT RECOGNIZED"),
+            }
+        }
     }
 
     fn op_0(&mut self, nnn: u16) {
@@ -279,26 +291,61 @@ impl Cpu {
         self.pc += 2;
     }
 
-    // TODO:
-    fn op_d(&mut self, nnn: u16) {}
-
-    fn op_e(&mut self, nnn: u16) {
+    // Draws a sprite at coordinate (VX, VY) that has a width of 8 pixels and a height of N+1 pixels.
+    fn op_d(&mut self, nnn: u16) {
         let x: usize = ((nnn & 0x0F00) >> 8) as usize;
         let y: usize = ((nnn & 0x00F0) >> 4) as usize;
-        let z: usize = (nnn & 0x000F) as usize;
+        let n: usize = (nnn & 0x000F) as usize;
+
+        let x_coo: usize = (self.v[x] & 64) as usize;
+        let y_coo: usize = (self.v[y] & 32) as usize;
+        self.v[15] = 0;
+
+        for row in 0..n {
+            let byte: u8 = display::FONT_SET[self.i as usize];
+            for offset in 0..8 {
+                let bit: u8 = (byte >> offset) & 0b00000001;
+                if x_coo + offset > display::WIDTH as usize {
+                    break;
+                }
+                if bit == 1 && self.gfx[x_coo + y_coo * display::HEIGHT as usize] {
+                    self.gfx[x_coo + y_coo * display::HEIGHT as usize] = false;
+                    self.v[15] = 1;
+                } else if bit == 1 && !self.gfx[x_coo + y_coo * display::HEIGHT as usize] {
+                    self.gfx[x_coo + y_coo * display::HEIGHT as usize] = true;
+                }
+            }
+            if row + y_coo > display::HEIGHT as usize {
+                break;
+            }
+        }
+        self.pc += 2;
+    }
+
+    fn op_e(&mut self, nnn: u16, key: u8) {
+        let x: usize = ((nnn & 0x0F00) >> 8) as usize;
+        let y: usize = ((nnn & 0x00F0) >> 4) as usize;
 
         match y {
-            // TODO:
-            9 => {}
+            // Skips the next instruction if the key stored in VX is pressed.
+            9 => {
+                if self.v[x] == key {
+                    self.pc += 2;
+                }
+            }
 
-            // TODO:
-            10 => {}
+            // Skips the next instruction if the key stored in VX isn't pressed.
+            10 => {
+                if self.v[x] != key {
+                    self.pc += 2;
+                }
+            }
 
             _ => panic!("ERROR OP_E NOT RECOGNIZED"),
         }
     }
 
-    fn op_f(&mut self, nnn: u16) {
+    fn op_f(&mut self, nnn: u16, key_pressed: u8) {
         let x: usize = ((nnn & 0x0F00) >> 8) as usize;
         let y: usize = ((nnn & 0x00F0) >> 4) as usize;
         let z: usize = (nnn & 0x000F) as usize;
@@ -308,8 +355,14 @@ impl Cpu {
                 // Sets VX to the value of the delay timer.
                 7 => self.v[x] = self.delay_timer,
 
-                // TODO:
-                10 => self.v[x] = self.delay_timer,
+                // A key press is awaited, and then stored in VX.
+                10 => {
+                    self.wait_key = true;
+                    if key_pressed != 0 {
+                        self.v[x] = key_pressed;
+                        self.wait_key = false;
+                    }
+                }
 
                 _ => panic!("ERROR OP_F0 NOT RECOGNIZED"),
             },
@@ -327,19 +380,35 @@ impl Cpu {
                 _ => panic!("ERROR OP_F1 NOT RECOGNIZED"),
             },
 
-            // TODO:
-            2 => {}
+            // Sets I to the location of the sprite for the character in VX.
+            2 => {
+                self.i = (self.v[x] as u16) * 5;
+            }
 
-            // TODO:
-            3 => {}
+            // Stores the binary-coded decimal representation of VX.
+            3 => {
+                self.memory[self.i as usize] = self.v[x] / 100;
+                self.memory[self.i as usize + 1] = (self.v[x] % 100) / 10;
+                self.memory[self.i as usize + 2] = self.v[x] % 10;
+            }
 
-            // TODO:
-            5 => {}
+            // Stores V0 to VX (including VX) in memory starting at address I.
+            5 => {
+                for i in 0..x + 1 {
+                    self.memory[self.i as usize + i] = self.v[i];
+                }
+            }
 
-            // TODO:
-            6 => {}
+            // Fills V0 to VX (including VX) with values from memory starting at address I.
+            6 => {
+                for i in 0..x + 1 {
+                    self.v[i] = self.memory[self.i as usize + i];
+                }
+            }
 
             _ => panic!("ERROR OP_F NOT RECOGNIZED"),
         }
+
+        self.pc += 2;
     }
 }
