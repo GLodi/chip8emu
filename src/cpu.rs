@@ -1,3 +1,7 @@
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::io::prelude::*;
+
 use crate::{cartridge, display};
 use rand::Rng;
 
@@ -12,7 +16,7 @@ pub struct Cpu {
     stack: [u16; 12],   // Stack
     delay_timer: u8,    // Counters count at 60hz.
     sound_timer: u8,    // When set above zero, they will count down.
-    wait_key: bool,
+    wait_key: bool,     // CPU waiting for key press
     pub gfx: [bool; (display::WIDTH as usize) * (display::HEIGHT as usize)], // 2048 pixels monochrone (1-on, 0-off)
 }
 
@@ -45,14 +49,20 @@ impl Cpu {
     }
 
     // Reads memory from 0x200 until it finds an empty address
-    pub fn dump_memory(&self) {
+    pub fn dump_memory(&self, to_file: bool) {
         for e in (0..(0x1000 - 0x200)).step_by(2) {
             let opcode: u16 = (self.memory[self.pc as usize + e] as u16) << 8
                 | (self.memory[self.pc as usize + e + 1] as u16);
             if opcode == 0 {
                 break;
             }
-            println!("{:#0x}", opcode);
+
+            if to_file {
+                let a = format!("{:#0x}", opcode);
+                write_to_file(&a[..]);
+            } else {
+                println!("{:#0x}", opcode);
+            }
         }
     }
 
@@ -125,6 +135,7 @@ impl Cpu {
                 for i in 0..(display::HEIGHT + display::WIDTH) as usize {
                     self.gfx[i] = false;
                 }
+                self.pc += 2;
             }
 
             // Returns from a subroutine
@@ -144,7 +155,7 @@ impl Cpu {
 
     // Calls subroutine at NNN
     fn op_2(&mut self, nnn: u16) {
-        self.stack[self.sp as usize] = self.pc as u16;
+        self.stack[self.sp as usize] = self.pc as u16 + 2;
         self.sp += 1;
         self.pc = nnn;
     }
@@ -156,6 +167,7 @@ impl Cpu {
         if self.v[x] == nn {
             self.pc += 2;
         }
+        self.pc += 2;
     }
 
     // Skips the next instruction if VX doesn't equal NN.
@@ -165,6 +177,7 @@ impl Cpu {
         if self.v[x] != nn {
             self.pc += 2;
         }
+        self.pc += 2;
     }
 
     // Skips the next instruction if VX equals VY.
@@ -174,6 +187,7 @@ impl Cpu {
         if self.v[x] == self.v[y] {
             self.pc += 2;
         }
+        self.pc += 2;
     }
 
     // Sets VX to NN.
@@ -302,7 +316,7 @@ impl Cpu {
         self.v[15] = 0;
 
         for row in 0..n {
-            let byte: u8 = display::FONT_SET[self.i as usize];
+            let byte: u8 = self.memory[self.i as usize];
             for offset in 0..8 {
                 let bit: u8 = (byte >> offset) & 0b00000001;
                 if x_coo + offset > display::WIDTH as usize {
@@ -410,5 +424,17 @@ impl Cpu {
         }
 
         self.pc += 2;
+    }
+}
+
+fn write_to_file(s: &str) {
+    let mut file = OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open("instructions.txt")
+        .unwrap();
+
+    if let Err(e) = writeln!(file, "{}", s) {
+        eprintln!("Couldn't write to file: {}", e);
     }
 }

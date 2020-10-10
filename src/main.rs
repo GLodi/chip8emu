@@ -1,6 +1,8 @@
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::env;
+use std::fs::File;
+use std::io::prelude::*;
 use std::time::Duration;
 
 mod cartridge;
@@ -19,9 +21,12 @@ fn main() {
     let mut cpu = cpu::Cpu::initialize(&c);
     let mut d = display::Display::new();
 
-    cpu.dump_memory();
+    // If you want to dump it to a .txt set the parameter to true
+    // and create a file under root named instructions.txt
+    // cpu.dump_memory(false);
 
-    cpu.print_digit(8, 32, 10);
+    println!("------");
+    println!("  ");
 
     'gameloop: loop {
         d.canvas.clear();
@@ -46,7 +51,6 @@ fn main() {
         let mut key_pressed: u8 = 0;
 
         if !keys.is_empty() && keys[0] == Keycode::Num1 {
-            cpu.print_digit(11, 12, 0);
             match keys[0] {
                 Keycode::Num1 => key_pressed = 1,
                 Keycode::Num2 => key_pressed = 2,
