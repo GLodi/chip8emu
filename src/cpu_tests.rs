@@ -17,8 +17,10 @@ fn test_init() {
 fn op_00e0() {
     let mut cpu = Cpu::initialize(&vec![1, 1, 1]);
     cpu.emulate_instruction(0x00e0, 0);
-    for i in 0..(display::HEIGHT + display::WIDTH) as usize {
-        assert_eq!(cpu.gfx[i], false);
+    for i in 0..(display::HEIGHT) as usize {
+        for j in 0..(display::WIDTH) as usize {
+            assert_eq!(cpu.gfx[i][j], 0);
+        }
     }
     assert_eq!(cpu.pc, 0x202);
     assert_eq!(cpu.v[0xf], 0);
@@ -292,18 +294,18 @@ fn op_dxyn() {
     cpu.i = 0;
     cpu.memory[0] = 0b11111111;
     cpu.memory[1] = 0b00000000;
-    cpu.gfx[0] = true;
-    cpu.gfx[1] = false;
-    cpu.gfx[display::WIDTH as usize] = true;
-    cpu.gfx[display::WIDTH as usize + 1] = false;
+    cpu.gfx[0][0] = 1;
+    cpu.gfx[0][1] = 0;
+    cpu.gfx[1][0] = 1;
+    cpu.gfx[1][1] = 0;
     cpu.v[0] = 0;
     cpu.emulate_instruction(0xd002, 0);
 
-    assert_eq!(cpu.gfx[0], false);
-    assert_eq!(cpu.gfx[1], true);
-    assert_eq!(cpu.gfx[display::WIDTH as usize], true);
-    assert_eq!(cpu.gfx[display::WIDTH as usize + 1], false);
-    assert_eq!(cpu.v[0xf], 1);
+    assert_eq!(cpu.gfx[0][0], 0);
+    assert_eq!(cpu.gfx[0][1], 1);
+    assert_eq!(cpu.gfx[1][0], 1);
+    assert_eq!(cpu.gfx[1][1], 0);
+    assert_eq!(cpu.v[0x0f], 1);
     assert_eq!(cpu.pc, 0x202);
 }
 

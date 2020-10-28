@@ -16,7 +16,7 @@ pub struct Cpu {
     delay_timer: u8,    // Counters count at 60hz.
     sound_timer: u8,    // When set above zero, they will count down.
     wait_key: bool,     // CPU waiting for key press
-    pub gfx: [bool; (display::WIDTH as usize) * (display::HEIGHT as usize)], // 2048 pixels monochrone (1-on, 0-off)
+    pub gfx: [[u8; (display::WIDTH as usize)]; (display::HEIGHT as usize)], // 2048 pixels monochrone (1-on, 0-off)
 }
 
 impl Cpu {
@@ -48,7 +48,7 @@ impl Cpu {
             delay_timer: 0,
             sound_timer: 0,
             wait_key: false,
-            gfx: [false; (display::WIDTH as usize) * (display::HEIGHT as usize)],
+            gfx: [[0; (display::WIDTH as usize)]; (display::HEIGHT as usize)],
         }
     }
 
@@ -83,7 +83,7 @@ impl Cpu {
                 let last_bit: u8 = temp & and_mask;
                 // println!("{}", last_bit);
                 if last_bit == 128 {
-                    self.gfx[i as usize * 64 + e as usize] = true;
+                    self.gfx[i as usize][e as usize] = 1;
                 }
                 temp = temp << 1;
             }
@@ -170,8 +170,10 @@ impl Cpu {
         match nnn {
             // Clears the screen
             0x0E0 => {
-                for i in 0..(display::HEIGHT + display::WIDTH) as usize {
-                    self.gfx[i] = false;
+                for i in 0..(display::HEIGHT) as usize {
+                    for j in 0..(display::WIDTH) as usize {
+                        self.gfx[i][j] = 0;
+                    }
                 }
                 self.pc += 2;
             }
@@ -350,22 +352,15 @@ impl Cpu {
         let y: usize = ((nnn & 0x00F0) >> 4) as usize;
         let n: usize = (nnn & 0x000F) as usize;
 
-        let x_coo: usize = (self.v[x] & 64) as usize;
-        let y_coo: usize = (self.v[y] & 32) as usize;
         self.v[0xf] = 0;
 
         for byte in 0..n {
-            let y: u8 = (self.v[y] + byte as u8) & display::HEIGHT as u8;
+            let y: u8 = (self.v[y] + byte as u8) % display::HEIGHT as u8;
             for b in 0..8 {
                 let x: u8 = (self.v[x] + b as u8) % display::WIDTH as u8;
                 let color: u8 = (self.memory[self.i as usize + byte] >> (7 - b)) & 1;
-                let one: u8 = if self.gfx[(y * display::HEIGHT as u8 + x) as usize] {
-                    1
-                } else {
-                    0
-                };
-                self.v[0xf] |= color & one;
-                self.gfx[(y * display::HEIGHT as u8 + x) as usize] ^= color;
+                self.v[0x0f] |= color & self.gfx[y as usize][x as usize];
+                self.gfx[y as usize][x as usize] ^= color;
             }
         }
 

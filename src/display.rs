@@ -38,16 +38,22 @@ impl Display {
     }
 
     // edit self.canvas so that it reflects the current state of gfx
-    pub fn set_frame(&mut self, &gfx: &[bool; (WIDTH as usize) * (HEIGHT as usize)]) {
+    pub fn set_frame(&mut self, &gfx: &[[u8; (WIDTH as usize)]; (HEIGHT as usize)]) {
         for (n, el) in gfx.to_vec().iter().enumerate() {
-            let color = if *el { Color::WHITE } else { Color::BLACK };
-            self.canvas.set_draw_color(color);
-            let _ = self.canvas.fill_rect(Rect::new(
-                ((n as i32) % WIDTH as i32) * BOX_SIZE as i32,
-                ((n as i32) / WIDTH as i32) * BOX_SIZE as i32,
-                BOX_SIZE,
-                BOX_SIZE,
-            ));
+            for (s, &c) in el.iter().enumerate() {
+                let x = (s as u32) * BOX_SIZE;
+                let y = (n as u32) * BOX_SIZE;
+
+                if c == 0 {
+                    self.canvas.set_draw_color(Color::RGB(0, 0, 0));
+                } else {
+                    self.canvas.set_draw_color(Color::RGB(0, 250, 0));
+                }
+
+                let _ = self
+                    .canvas
+                    .fill_rect(Rect::new(x as i32, y as i32, BOX_SIZE, BOX_SIZE));
+            }
         }
     }
 }
