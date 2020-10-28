@@ -18,7 +18,7 @@ fn main() {
     }
 
     let c = cartridge::Cartridge::new(&args[1]);
-    let mut cpu = cpu::Cpu::initialize(&c);
+    let mut cpu = cpu::Cpu::initialize(&c.rom);
     let mut d = display::Display::new();
 
     // If you want to dump it to a .txt set the parameter to true
@@ -50,7 +50,7 @@ fn main() {
 
         let mut key_pressed: u8 = 0;
 
-        if !keys.is_empty() && keys[0] == Keycode::Num1 {
+        if !keys.is_empty() {
             match keys[0] {
                 Keycode::Num1 => key_pressed = 1,
                 Keycode::Num2 => key_pressed = 2,
@@ -73,6 +73,7 @@ fn main() {
         }
 
         cpu.emulate_cycle(key_pressed);
+        cpu.print_state();
 
         d.set_frame(&cpu.gfx);
 

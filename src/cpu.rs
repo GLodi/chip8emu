@@ -1,9 +1,8 @@
-use std::fs::File;
+use rand::Rng;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 
-use crate::{cartridge, display};
-use rand::Rng;
+use crate::display;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Cpu {
@@ -22,16 +21,21 @@ pub struct Cpu {
 
 impl Cpu {
     // Initialize registers and memory once
-    pub fn initialize(c: &cartridge::Cartridge) -> Cpu {
+    pub fn initialize(c: &Vec<u8>) -> Cpu {
         let mut m: [u8; 4096] = [0; 4096];
         for i in 0..80 {
             m[i] = display::FONT_SET[i];
         }
 
         // Loads cartridge data starting from RAM address 0x200
-        for (i, &el) in c.rom.iter().enumerate() {
+        let mut last = 0;
+        for (i, &el) in c.iter().enumerate() {
             m[0x200 + i] = el;
+            if 0x200 + i > last {
+                last = 0x200 + i;
+            }
         }
+        println!("last: {:#0x}", last);
 
         Cpu {
             opcode: 0,
@@ -86,22 +90,54 @@ impl Cpu {
         }
     }
 
+    pub fn print_state(&self) {
+        let flag = if self.wait_key { 1 } else { 0 };
+        println!(
+            "i: {:#0x}  pc: {:#0x}  sp:{:#0x}  flag:{:#0x}",
+            self.i, self.pc, self.sp, flag
+        );
+        print!("v: ");
+        for i in 0..15 {
+            print!(" {:#0x}", self.v[i]);
+        }
+        println!();
+        print!("stack: ");
+        for i in 0..12 {
+            print!(" {:#0x}", self.stack[i]);
+        }
+        println!();
+        print!("mem[i]: ");
+        for i in 0..16 {
+            print!(" {:#0x}", self.memory[self.i as usize + i]);
+        }
+        println!();
+        println!();
+    }
+
+    pub fn emulate_instruction(&mut self, opcode: u16, key: u8) {
+        let op1: u8 = (opcode >> 8) as u8;
+        let op2: u8 = (opcode & 0x00FF) as u8;
+        self.memory[self.pc as usize] = op1;
+        self.memory[self.pc as usize + 1] = op2;
+        self.emulate_cycle(key);
+    }
+
     pub fn emulate_cycle(&mut self, key: u8) {
         let opcode: u16 = (self.memory[self.pc as usize] as u16) << 8
             | (self.memory[self.pc as usize + 1] as u16);
         let nnn: u16 = opcode & 0x0FFF;
 
-        println!("{:#0x}", opcode);
+        println!("opcode: {:#0x}", opcode);
 
-        if self.wait_key {
-            return;
-        } else {
+        if !self.wait_key || (self.wait_key && key != 0) {
             // Update timers
-            if self.delay_timer > 0 {
-                self.delay_timer -= 1;
-            }
-            if self.sound_timer > 0 {
-                self.sound_timer -= 1;
+            if !self.wait_key {
+                if self.delay_timer > 0 {
+                    self.delay_timer -= 1;
+                }
+                if self.sound_timer > 0 {
+                    self.sound_timer -= 1;
+                }
             }
 
             // All opcodes use the first 4 bits to specify what command
@@ -125,6 +161,8 @@ impl Cpu {
                 0xF000 => self.op_f(nnn, key),
                 _ => panic!("ERROR OPCODE NOT RECOGNIZED"),
             }
+        } else {
+            return;
         }
     }
 
@@ -155,7 +193,7 @@ impl Cpu {
 
     // Calls subroutine at NNN
     fn op_2(&mut self, nnn: u16) {
-        self.stack[self.sp as usize] = self.pc as u16 + 2;
+        self.stack[self.sp as usize] = self.pc as u16;
         self.sp += 1;
         self.pc = nnn;
     }
@@ -202,7 +240,7 @@ impl Cpu {
     fn op_7(&mut self, nnn: u16) {
         let x: usize = ((nnn & 0x0F00) >> 8) as usize;
         let nn: u8 = (nnn & 0x00FF) as u8;
-        self.v[x] += nn;
+        self.v[x] = self.v[x].wrapping_add(nn);
         self.pc += 2;
     }
 
@@ -227,9 +265,9 @@ impl Cpu {
             4 => {
                 let res = self.v[x] as u16 + self.v[y] as u16;
                 if res > 0xFF {
-                    self.v[15] = 1;
+                    self.v[0xf] = 1;
                 } else {
-                    self.v[15] = 0;
+                    self.v[0xf] = 0;
                 }
                 self.v[x] = res as u8;
             }
@@ -238,16 +276,16 @@ impl Cpu {
             5 => {
                 let res = self.v[x] as i16 - self.v[y] as i16;
                 if res < 0x0 {
-                    self.v[15] = 0;
+                    self.v[0xf] = 0;
                 } else {
-                    self.v[15] = 1;
+                    self.v[0xf] = 1;
                 }
                 self.v[x] = self.v[x].wrapping_sub(self.v[y]);
             }
 
             // Stores the least significant bit of VX in VF and then shifts VX to the right by 1.
             6 => {
-                self.v[15] = self.v[x] & 0b00000001;
+                self.v[0xf] = self.v[x] & 0b00000001;
                 self.v[x] >>= 1;
             }
 
@@ -255,16 +293,16 @@ impl Cpu {
             7 => {
                 let res = self.v[y] as i16 - self.v[x] as i16;
                 if res < 0x0 {
-                    self.v[15] = 0;
+                    self.v[0xf] = 0;
                 } else {
-                    self.v[15] = 1;
+                    self.v[0xf] = 1;
                 }
                 self.v[x] = self.v[y].wrapping_sub(self.v[x]);
             }
 
             // Stores the most significant bit of VX in VF and then shifts VX to the left by 1.
             14 => {
-                self.v[15] = (self.v[x] & 0b10000000) >> 7;
+                self.v[0xf] = (self.v[x] & 0b10000000) >> 7;
                 self.v[x] <<= 1;
             }
 
@@ -280,6 +318,7 @@ impl Cpu {
         if self.v[x] != self.v[y] {
             self.pc += 2;
         }
+        self.pc += 2;
     }
 
     // Sets I to the address NNN.
@@ -313,26 +352,23 @@ impl Cpu {
 
         let x_coo: usize = (self.v[x] & 64) as usize;
         let y_coo: usize = (self.v[y] & 32) as usize;
-        self.v[15] = 0;
+        self.v[0xf] = 0;
 
-        for row in 0..n {
-            let byte: u8 = self.memory[self.i as usize];
-            for offset in 0..8 {
-                let bit: u8 = (byte >> offset) & 0b00000001;
-                if x_coo + offset > display::WIDTH as usize {
-                    break;
-                }
-                if bit == 1 && self.gfx[x_coo + y_coo * display::HEIGHT as usize] {
-                    self.gfx[x_coo + y_coo * display::HEIGHT as usize] = false;
-                    self.v[15] = 1;
-                } else if bit == 1 && !self.gfx[x_coo + y_coo * display::HEIGHT as usize] {
-                    self.gfx[x_coo + y_coo * display::HEIGHT as usize] = true;
-                }
-            }
-            if row + y_coo > display::HEIGHT as usize {
-                break;
+        for byte in 0..n {
+            let y: u8 = (self.v[y] + byte as u8) & display::HEIGHT as u8;
+            for b in 0..8 {
+                let x: u8 = (self.v[x] + b as u8) % display::WIDTH as u8;
+                let color: u8 = (self.memory[self.i as usize + byte] >> (7 - b)) & 1;
+                let one: u8 = if self.gfx[(y * display::HEIGHT as u8 + x) as usize] {
+                    1
+                } else {
+                    0
+                };
+                self.v[0xf] |= color & one;
+                self.gfx[(y * display::HEIGHT as u8 + x) as usize] ^= color;
             }
         }
+
         self.pc += 2;
     }
 
@@ -357,6 +393,8 @@ impl Cpu {
 
             _ => panic!("ERROR OP_E NOT RECOGNIZED"),
         }
+
+        self.pc += 2;
     }
 
     fn op_f(&mut self, nnn: u16, key_pressed: u8) {
@@ -367,7 +405,10 @@ impl Cpu {
         match y {
             0 => match z {
                 // Sets VX to the value of the delay timer.
-                7 => self.v[x] = self.delay_timer,
+                7 => {
+                    self.v[x] = self.delay_timer;
+                    self.pc += 2;
+                }
 
                 // A key press is awaited, and then stored in VX.
                 10 => {
@@ -375,6 +416,7 @@ impl Cpu {
                     if key_pressed != 0 {
                         self.v[x] = key_pressed;
                         self.wait_key = false;
+                        self.pc += 2;
                     }
                 }
 
@@ -383,13 +425,22 @@ impl Cpu {
 
             1 => match z {
                 // Sets the delay timer to VX.
-                5 => self.delay_timer = self.v[x],
+                5 => {
+                    self.delay_timer = self.v[x];
+                    self.pc += 2;
+                }
 
                 // Sets the sound timer to VX.
-                8 => self.sound_timer = self.v[x],
+                8 => {
+                    self.sound_timer = self.v[x];
+                    self.pc += 2;
+                }
 
                 // Adds VX to I. VF is not affected.
-                15 => self.i += self.v[x] as u16,
+                14 => {
+                    self.i += self.v[x] as u16;
+                    self.pc += 2;
+                }
 
                 _ => panic!("ERROR OP_F1 NOT RECOGNIZED"),
             },
@@ -397,6 +448,7 @@ impl Cpu {
             // Sets I to the location of the sprite for the character in VX.
             2 => {
                 self.i = (self.v[x] as u16) * 5;
+                self.pc += 2;
             }
 
             // Stores the binary-coded decimal representation of VX.
@@ -404,6 +456,7 @@ impl Cpu {
                 self.memory[self.i as usize] = self.v[x] / 100;
                 self.memory[self.i as usize + 1] = (self.v[x] % 100) / 10;
                 self.memory[self.i as usize + 2] = self.v[x] % 10;
+                self.pc += 2;
             }
 
             // Stores V0 to VX (including VX) in memory starting at address I.
@@ -411,6 +464,7 @@ impl Cpu {
                 for i in 0..x + 1 {
                     self.memory[self.i as usize + i] = self.v[i];
                 }
+                self.pc += 2;
             }
 
             // Fills V0 to VX (including VX) with values from memory starting at address I.
@@ -418,12 +472,11 @@ impl Cpu {
                 for i in 0..x + 1 {
                     self.v[i] = self.memory[self.i as usize + i];
                 }
+                self.pc += 2;
             }
 
             _ => panic!("ERROR OP_F NOT RECOGNIZED"),
         }
-
-        self.pc += 2;
     }
 }
 
@@ -438,3 +491,7 @@ fn write_to_file(s: &str) {
         eprintln!("Couldn't write to file: {}", e);
     }
 }
+
+#[cfg(test)]
+#[path = "./cpu_tests.rs"]
+mod cpu_tests;
