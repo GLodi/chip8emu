@@ -13,4 +13,4 @@ arch: `yay sdl2`
 
 ubuntu: `sudo apt-get install libsdl2-dev libsdl2-gfx-dev`
 
-To run, just `cargo build` and then `cargo run pong.rom`.
+To run, just `cargo run pong.rom`.
