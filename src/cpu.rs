@@ -90,11 +90,11 @@ impl Cpu {
         }
     }
 
-    pub fn print_state(&self) {
+    pub fn print_state(&self, key: u8) {
         let flag = if self.wait_key { 1 } else { 0 };
         println!(
-            "i: {:#0x}  pc: {:#0x}  sp:{:#0x}  flag:{:#0x}",
-            self.i, self.pc, self.sp, flag
+            "i: {:#0x}  pc: {:#0x}  sp:{:#0x}  flag:{:#0x}  key:{}",
+            self.i, self.pc, self.sp, flag, key
         );
         print!("v: ");
         for i in 0..15 {
@@ -195,7 +195,7 @@ impl Cpu {
 
     // Calls subroutine at NNN
     fn op_2(&mut self, nnn: u16) {
-        self.stack[self.sp as usize] = self.pc as u16;
+        self.stack[self.sp as usize] = self.pc as u16 + 2;
         self.sp += 1;
         self.pc = nnn;
     }
@@ -407,6 +407,7 @@ impl Cpu {
 
                 // A key press is awaited, and then stored in VX.
                 10 => {
+                    println!("pressed: {}", key_pressed);
                     self.wait_key = true;
                     if key_pressed != 0 {
                         self.v[x] = key_pressed;

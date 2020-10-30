@@ -49,7 +49,7 @@ fn op_1nnn() {
 fn op_2nnn() {
     let mut cpu = Cpu::initialize(&vec![1, 1, 1]);
     cpu.emulate_instruction(0x2345, 0);
-    assert_eq!(cpu.stack[0], 0x200);
+    assert_eq!(cpu.stack[0], 0x202);
     assert_eq!(cpu.pc, 0x0345);
     assert_eq!(cpu.sp, 1);
     assert_eq!(cpu.v[0xf], 0);

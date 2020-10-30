@@ -73,23 +73,11 @@ fn main() {
         }
 
         cpu.emulate_cycle(key_pressed);
-        cpu.print_state();
+        cpu.print_state(key_pressed);
 
         // cpu.print_digit(15, 60, 10);
 
         d.set_frame(&cpu.gfx);
-
-        // for i in 0..display::HEIGHT {
-        //     for j in 0..display::WIDTH {
-        //         let t = if cpu.gfx[i as usize][j as usize] == 1 {
-        //             "1"
-        //         } else {
-        //             "0"
-        //         };
-        //         print!("{}", t);
-        //     }
-        //     println!();
-        // }
 
         d.canvas.present();
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
