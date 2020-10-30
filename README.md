@@ -1,3 +1,6 @@
+![alt text](https://github.com/GLodi/chip8emu/blob/master/example.png?raw=true)
+
+
 This is my take on a simple [Chip8](https://en.wikipedia.org/wiki/CHIP-8) emulator in Rust.
 
 It's my first attempt at writing Rust, and should be regarded just as an hello world to emulators.
@@ -10,4 +13,4 @@ arch: `yay sdl2`
 
 ubuntu: `sudo apt-get install libsdl2-dev libsdl2-gfx-dev`
 
-To run, just `cargo run` followed by a chip8 rom.
+To run, just `cargo install` and then `cargo run pong.rom`.
